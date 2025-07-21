@@ -16,8 +16,17 @@ export function createItemController(itemService: ItemService) {
         res.status(400).json({ error: 'Failed to create item', details: err });
       }
     },
-    getItems: async (_req: Request, res: Response) => {
-      const items = await itemService.findAll();
+    getItems: async (req: Request, res: Response) => {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+      }
+      const { name, limit, offset } = req.query;
+      const items = await itemService.findAll({
+        name: typeof name === 'string' ? name : undefined,
+        limit: limit ? parseInt(limit as string, 10) : undefined,
+        offset: offset ? parseInt(offset as string, 10) : undefined,
+      });
       res.json(items);
     },
     getItemById: async (req: Request, res: Response) => {

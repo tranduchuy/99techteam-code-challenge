@@ -21,7 +21,9 @@ describe('ItemService', () => {
   let service: ItemService;
   beforeEach(() => {
     jest.clearAllMocks();
-    service = new ItemService(mockRepo as unknown as any);
+    service = new ItemService(
+      mockRepo as unknown as import('typeorm').Repository<Item>,
+    );
   });
 
   it('creates and saves an item', async () => {
@@ -39,6 +41,32 @@ describe('ItemService', () => {
     const items = [{ name: 'A' }, { name: 'B' }] as Item[];
     mockRepo.find.mockResolvedValue(items);
     const result = await service.findAll();
+    expect(result).toBe(items);
+  });
+
+  it('finds items by name', async () => {
+    const items = [{ name: 'A' }] as Item[];
+    mockRepo.find.mockResolvedValue(items);
+    const result = await service.findAll({ name: 'A' });
+    expect(mockRepo.find).toHaveBeenCalledWith({
+      where: { name: 'A' },
+      take: undefined,
+      skip: undefined,
+      order: { createdAt: 'DESC' },
+    });
+    expect(result).toBe(items);
+  });
+
+  it('finds items with pagination', async () => {
+    const items = [{ name: 'B' }] as Item[];
+    mockRepo.find.mockResolvedValue(items);
+    const result = await service.findAll({ limit: 1, offset: 2 });
+    expect(mockRepo.find).toHaveBeenCalledWith({
+      where: {},
+      take: 1,
+      skip: 2,
+      order: { createdAt: 'DESC' },
+    });
     expect(result).toBe(items);
   });
 

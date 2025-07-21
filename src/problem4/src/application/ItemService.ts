@@ -1,4 +1,4 @@
-import { Repository } from 'typeorm';
+import { Repository, FindOptionsWhere } from 'typeorm';
 import { Item } from '../domains/Item';
 
 export class ItemService {
@@ -9,8 +9,22 @@ export class ItemService {
     return this.itemRepo.save(item);
   }
 
-  async findAll(): Promise<Item[]> {
-    return this.itemRepo.find();
+  async findAll(options?: {
+    name?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<Item[]> {
+    const { name, limit, offset } = options || {};
+    const where: FindOptionsWhere<Item> = {};
+    if (name) {
+      where.name = name;
+    }
+    return this.itemRepo.find({
+      where,
+      take: limit,
+      skip: offset,
+      order: { createdAt: 'DESC' },
+    });
   }
 
   async findById(id: string): Promise<Item | null> {

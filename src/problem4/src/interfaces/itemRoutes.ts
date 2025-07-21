@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { body } from 'express-validator';
+import { body, query } from 'express-validator';
 import AppDataSource from '../data-source';
 import { Item } from '../domains/Item';
 import { ItemService } from '../application/ItemService';
@@ -44,6 +44,27 @@ import { createItemController } from './itemController';
  *   get:
  *     summary: Get all items
  *     tags: [Items]
+ *     parameters:
+ *       - in: query
+ *         name: name
+ *         schema:
+ *           type: string
+ *         required: false
+ *         description: Filter by item name
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *         required: false
+ *         description: Limit the number of results (must be >= 1)
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           minimum: 0
+ *         required: false
+ *         description: Number of items to skip (must be >= 0, for pagination)
  *     responses:
  *       200:
  *         description: List of items
@@ -53,6 +74,24 @@ import { createItemController } from './itemController';
  *               type: array
  *               items:
  *                 $ref: '#/components/schemas/Item'
+ *       400:
+ *         description: Validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 errors:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       msg:
+ *                         type: string
+ *                       param:
+ *                         type: string
+ *                       location:
+ *                         type: string
  */
 
 /**
@@ -160,8 +199,14 @@ const itemValidation = [
   body('description').optional().isString(),
 ];
 
+const getItemsValidation = [
+  query('name').optional().isString(),
+  query('limit').optional().isInt({ min: 1 }),
+  query('offset').optional().isInt({ min: 0 }),
+];
+
 router.post('/', itemValidation, controller.createItem);
-router.get('/', controller.getItems);
+router.get('/', getItemsValidation, controller.getItems);
 router.get('/:id', controller.getItemById);
 router.put('/:id', itemValidation, controller.updateItem);
 router.delete('/:id', controller.deleteItem);

@@ -1,4 +1,4 @@
-import { Item } from './Item';
+import { Item } from '../Item';
 
 describe('Item entity', () => {
   it('should create an Item with given properties', () => {

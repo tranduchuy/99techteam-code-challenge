@@ -1,15 +1,35 @@
 import { createItemController } from '../itemController';
 import { ItemService } from '../../application/ItemService';
 import { getMockReq, getMockRes } from '@jest-mock/express';
+import { validationResult } from 'express-validator';
 
-jest.mock('../application/ItemService');
+jest.mock('../../application/ItemService');
+jest.mock('express-validator', () => {
+  const original = jest.requireActual('express-validator');
+  return {
+    ...original,
+    validationResult: jest.fn(),
+  };
+});
+
+beforeAll(() => {
+  (validationResult as unknown as jest.Mock).mockImplementation(() => ({
+    isEmpty: () => true,
+    array: () => [],
+  }));
+});
 
 describe('itemController', () => {
-  let service: any;
+  let service: jest.Mocked<ItemService>;
   let controller: ReturnType<typeof createItemController>;
   beforeEach(() => {
-    service = new ItemService({} as any);
-    (ItemService as jest.Mock).mockImplementation(() => service);
+    service = {
+      create: jest.fn(),
+      findAll: jest.fn(),
+      findById: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+    } as unknown as jest.Mocked<ItemService>;
     controller = createItemController(service);
   });
 
@@ -28,6 +48,78 @@ describe('itemController', () => {
     const { res } = getMockRes();
     await controller.getItems(req, res);
     expect(res.json).toHaveBeenCalledWith([{ id: '1', name: 'A' }]);
+  });
+
+  it('getItems: should support filtering by name', async () => {
+    service.findAll = jest.fn().mockResolvedValue([{ id: '1', name: 'A' }]);
+    const req = getMockReq({ query: { name: 'A' } });
+    const { res } = getMockRes();
+    await controller.getItems(req, res);
+    expect(service.findAll).toHaveBeenCalledWith({
+      name: 'A',
+      limit: undefined,
+      offset: undefined,
+    });
+    expect(res.json).toHaveBeenCalledWith([{ id: '1', name: 'A' }]);
+  });
+
+  it('getItems: should support pagination', async () => {
+    service.findAll = jest.fn().mockResolvedValue([{ id: '2', name: 'B' }]);
+    const req = getMockReq({ query: { limit: '1', offset: '1' } });
+    const { res } = getMockRes();
+    await controller.getItems(req, res);
+    expect(service.findAll).toHaveBeenCalledWith({
+      name: undefined,
+      limit: 1,
+      offset: 1,
+    });
+    expect(res.json).toHaveBeenCalledWith([{ id: '2', name: 'B' }]);
+  });
+
+  it('getItems: should return 400 for invalid limit', async () => {
+    (validationResult as unknown as jest.Mock).mockReturnValueOnce({
+      isEmpty: () => false,
+      array: () => [
+        { msg: 'Invalid limit', param: 'limit', location: 'query' },
+      ],
+    });
+    const req = getMockReq({ query: { limit: '0' } });
+    const { res } = getMockRes();
+    await controller.getItems(req, res);
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ errors: expect.any(Array) }),
+    );
+  });
+
+  it('getItems: should return 400 for invalid offset', async () => {
+    (validationResult as unknown as jest.Mock).mockReturnValueOnce({
+      isEmpty: () => false,
+      array: () => [
+        { msg: 'Invalid offset', param: 'offset', location: 'query' },
+      ],
+    });
+    const req = getMockReq({ query: { offset: '-1' } });
+    const { res } = getMockRes();
+    await controller.getItems(req, res);
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ errors: expect.any(Array) }),
+    );
+  });
+
+  it('getItems: should return 400 for invalid name type', async () => {
+    (validationResult as unknown as jest.Mock).mockReturnValueOnce({
+      isEmpty: () => false,
+      array: () => [{ msg: 'Invalid name', param: 'name', location: 'query' }],
+    });
+    const req = getMockReq({ query: { name: ['foo', 'bar'] } });
+    const { res } = getMockRes();
+    await controller.getItems(req, res);
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ errors: expect.any(Array) }),
+    );
   });
 
   it('getItemById: should return item if found', async () => {
