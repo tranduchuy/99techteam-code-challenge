@@ -1,20 +1,16 @@
 {
   "compilerOptions": {
-    /* Language and Environment */
-    "target": "es2017",
-    "experimentalDecorators": true,
-    "emitDecoratorMetadata": true,
-    /* Modules */
+    "target": "ES2020",
     "module": "commonjs",
-    /* Interop Constraints */
-    "isolatedModules": true,
+    "lib": ["ES2020"],
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "strict": true,
     "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,    
-    "strict": true,           
-    "skipLibCheck": true 
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true
   },
-  "include": [
-    "src"
-  ],
-  "exclude": ["node_modules", "src/**/*.test.ts"]
-}
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
+} 
